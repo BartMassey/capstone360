@@ -72,7 +72,7 @@ class review(MethodView):
         input: self and a string to report to the console
         output: none
         """
-        logging.error("Fill Out Review - " + err_str)
+        logging.error("Fill Out Review - {}".format(err_str))
         abort(500)
 
     def convert_to_int(self, to_convert):
@@ -440,10 +440,12 @@ class review(MethodView):
                     points = int(points)
                 except ValueError:
                     flash('points must be an integer')
+                    points = 0
                     points_pass = False
 
-                if points < 0:
+                if (points_pass is True) and points < 0:
                     flash('Points must be 0 or greater')
+                    points = 0
                     points_pass = False
 
                 if points_pass is True:
@@ -457,10 +459,13 @@ class review(MethodView):
                             points_pass = False
             except ValueError:
                 self.display_error('Invalid input for points')
+                points = 0
+                points_pass = False
 
         # check that total is 100
         if total != 100:
             flash('Points total must be 100')
+            points = 0
             points_pass = False
 
         done = self.get_done(user_id, capstone_id)
