@@ -379,18 +379,20 @@ class review(MethodView):
         Input: only self
         Output: rendering the review.html template with errors reported
         to the user or rendering the success page to indicate
-        the user was successful in submitting their reform
+        the user was successful in submitting their report
         """
         # check if user exists
         user_id = request.form.get('user_id')
         test_user = self.confirm_user(user_id, capstone_id)
         if test_user is False:
             logging.error('Fill Out Review - Error when identifiyng user')
-            return render_template('review.html',
-                                   mems=None,
-                                   state=None,
-                                   input_error=None,
-                                   fatal_error='You have no open reviews.')
+            return render_template(
+                'review.html',
+                mems=None,
+                state=None,
+                input_error=None,
+                fatal_error='You have no open reviews.',
+            )
 
         # get user's team id
         tid = self.get_tid(user_id, capstone_id)
@@ -398,23 +400,27 @@ class review(MethodView):
         state = self.get_state(user_id, capstone_id)
         if state == 'Error':
             logging.error('Fill Out Review - Error while retrieving student state')
-            return render_template('review.html',
-                                   name=self.get_self_name(user_id),
-                                   mems=None,
-                                   state=None,
-                                   input_error=None,
-                                   fatal_error='You have no open reviews.')
+            return render_template(
+                'review.html',
+                name=self.get_self_name(user_id),
+                mems=None,
+                state=None,
+                input_error=None,
+                fatal_error='You have no open reviews.',
+            )
         # get user's team members
         try:
             mems = gbmodel.students().get_team_members(tid)
         except SQLAlchemyError:
             logging.error('Fill Out Review - Error while retrieving team members')
-            return render_template('review.html',
-                                   name=self.get_self_name(),
-                                   mems=None,
-                                   state=None,
-                                   input_error=None,
-                                   fatal_error='There was an error while retrieving user team members.')
+            return render_template(
+                'review.html',
+                name=self.get_self_name(),
+                mems=None,
+                state=None,
+                input_error=None,
+                fatal_error='There was an error while retrieving user team members.',
+            )
 
         # get student's cid
         cid = capstone_id
@@ -531,7 +537,7 @@ class review(MethodView):
                     learned = request.form[('learned')]
                     learned = learned.strip()
                     if len(learned) > 30000:
-                        print('string too long')
+                        logging.error('learned string too long')
                         abort(422)
 
                 proud = None
@@ -541,7 +547,7 @@ class review(MethodView):
                         proud = request.form[('proud')]
                         proud = proud.strip()
                         if len(proud) > 30000:
-                            print('string too long')
+                            logging.error('proud string too long')
                             abort(422)
 
                 points = request.form[('points_' + str(i))]
@@ -550,7 +556,7 @@ class review(MethodView):
                 if((len(strn) > 30000) or
                    (len(wkn) > 30000) or
                    (len(traits) > 30000)):
-                    print('string too long')
+                    logging.error('str/wkn/traits string too long')
                     abort(422)
 
                 points = self.convert_to_int(points)
@@ -560,10 +566,14 @@ class review(MethodView):
                 is_final = False
                 try:
                     logging.info('Checking if Late')
-                    is_not_late = gbmodel.capstone_session().check_not_late(cid,
-                                                                            datetime.now(),
-                                                                            self.get_state(user_id,
-                                                                                           capstone_id))
+                    is_not_late = gbmodel.capstone_session().check_not_late(
+                        cid,
+                        datetime.now(),
+                        self.get_state(
+                            user_id,
+                            capstone_id,
+                        ),
+                    )
 
                     if is_not_late is False:
                         late = True
@@ -583,7 +593,12 @@ class review(MethodView):
                     # update existing record
                     try:
                         logging.info('updating report')
-                        report = gbmodel.reports().get_report(user_id, i, tid, is_final)
+                        report = gbmodel.reports().get_report(
+                            user_id,
+                            i,
+                            tid,
+                            is_final,
+                        )
                         if report is not None:
                             report.tech_mastery = tech
                             report.work_ethic = ethic
@@ -617,11 +632,13 @@ class review(MethodView):
                     logging.info('creating report')
                     # insert new record
                     # add report, but do not commit yet
-                    test_sub = gbmodel.reports().insert_report(cid, datetime.now(), user_id,
-                                                               tid, i, tech, ethic, com, coop, init,
-                                                               focus, cont, lead, org, dlg, points,
-                                                               strn, wkn, traits, learned, proud,
-                                                               is_final, late)
+                    test_sub = gbmodel.reports().insert_report(
+                        cid, datetime.now(), user_id,
+                        tid, i, tech, ethic, com, coop, init,
+                        focus, cont, lead, org, dlg, points,
+                        strn, wkn, traits, learned, proud,
+                        is_final, late,
+                    )
                     # remember if this report submission failed
                     if test_sub is False:
                         logging.error('report creation failure')
@@ -635,10 +652,12 @@ class review(MethodView):
                 logging.info('committing reports')
                 # commit reports and update the user's state.
                 #  roll back changes if insertion failed
-                test_commit = gbmodel.reports().commit_reports(user_id,
-                                                               self.get_state(user_id, capstone_id),
-                                                               capstone_id,
-                                                               pass_insert)
+                test_commit = gbmodel.reports().commit_reports(
+                    user_id,
+                    self.get_state(user_id, capstone_id),
+                    capstone_id,
+                    pass_insert,
+                )
             if test_commit is True:
                 # success
                 return render_template('submitted.html')
